@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useState, useRef } from "react";
 import { Download, Upload, Info, Trash2, HelpCircle } from "lucide-react";
 import { useExercise } from "@/contexts/ExerciseContext";
 import { slideboardExercises, cardioExercises, weightExercises, noEquipmentExercises } from "@/lib/data";
@@ -348,21 +348,11 @@ const Settings = () => {
             toast.success("All data deleted successfully");
             
             // Step 3: Use mobile-safe navigation instead of window.location.reload()
-            // Mobile detection utility
-            const isMobileDevice = () => {
-            return window.Android || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            };
-            
-            // Safe navigation utility
             const safeNavigateHome = () => {
-            if (isMobileDevice()) {
-            // Mobile: Direct navigation to avoid reload issues
-            window.location.href = '/';
+            if (window.Android || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            window.location.replace('/');
             } else {
-            // Desktop: Delayed reload for better UX
-            setTimeout(() => {
             window.location.reload();
-            }, 100);
             }
             };
             
@@ -580,7 +570,21 @@ const Settings = () => {
               onClick={() => {
                 const email = prompt('Enter your email to become a beta tester:');
                 if (email) {
-                  window.location.href = `mailto:RicksAppServices@gmail.com?subject=Beta Tester Signup - GymDayFitTracker&body=New Beta Tester Signup%0D%0A%0D%0AEmail: ${email}%0D%0A%0D%0ADate: ${new Date().toLocaleDateString()}`;
+                  const subject = encodeURIComponent('🎉 Thank You for Testing with Us!');
+                  const body = encodeURIComponent(
+                    `Hello Beta Tester,\n\n` +
+                    `Thank you so much for taking the time to be one of our beta testers. Your feedback and support mean a lot — it helps us make this app better for everyone.\n\n` +
+                    `We truly appreciate you being part of this journey with us. If you have any thoughts, ideas, or run into any issues, please don't hesitate to share — we'd love to hear from you!\n\n` +
+                    `Thanks again for being awesome!\n\n` +
+                    `Best regards,\n` +
+                    `Rick\n\n` +
+                    `---\n` +
+                    `Beta Tester Email: ${email}\n` +
+                    `Signup Date: ${new Date().toLocaleDateString()}`
+                  );
+                  
+                  window.location.href = `mailto:RicksAppServices@gmail.com?subject=${subject}&body=${body}`;
+                  toast.success('Beta tester signup successful!');
                 }
               }}
             >
