@@ -6,12 +6,25 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import SettingsHelpPopup from "@/components/ui/SettingsHelpPopup";
 import { useSettings } from '@/contexts/SettingsContext';
+import { BetaTesterDialog } from "@/components/ui/BetaTesterDialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose
+} from "@/components/ui/dialog";
 
 const Settings = () => {
   const { unitSystem, setUnitSystem } = useSettings();
   const { exercises, exportToCSV, importFromCSV, deleteAllExercises, reinstallAllExercises } = useExercise();
   const [isLoading, setIsLoading] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [betaTesterDialogOpen, setBetaTesterDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -543,18 +556,23 @@ const Settings = () => {
             <Info className="h-8 w-8 text-primary" />
             <div>
               <p className="font-bold text-lg">GymDayFitTracker</p>
-              <p className="text-sm">Version 2.3</p>
+              <p className="text-sm">Version 2.4</p>
+              <p className="text-sm mt-1">Contact: RicksAppServices@gmail.com</p>
             </div>
           </div>
           <p className="mt-4 text-gray-400">
             Track your workouts, monitor your progress, and achieve your fitness goals with GymDayFitTracker.
           </p>
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               onClick={() => {
                 alert(
-                  'Version 2.3 Changes:\n' +
+                  'Version 2.4 Changes:\n' +
+                  '- Added beta tester signup with suggestions\n' +
+                  '- Enhanced mobile compatibility\n' +
+                  '- Updated version history display\n' +
+                  '\nVersion 2.3 Changes:\n' +
                   '- Added calories burned calculation\n' +
                   '- Improved workout tracking\n' +
                   '\nVersion 2.2 Changes:\n' +
@@ -565,34 +583,51 @@ const Settings = () => {
             >
               Version History
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                const email = prompt('Enter your email to become a beta tester:');
-                if (email) {
-                  const subject = encodeURIComponent('🎉 Thank You for Testing with Us!');
-                  const body = encodeURIComponent(
-                    `Hello Beta Tester,\n\n` +
-                    `Thank you so much for taking the time to be one of our beta testers. Your feedback and support mean a lot — it helps us make this app better for everyone.\n\n` +
-                    `We truly appreciate you being part of this journey with us. If you have any thoughts, ideas, or run into any issues, please don't hesitate to share — we'd love to hear from you!\n\n` +
-                    `Thanks again for being awesome!\n\n` +
-                    `Best regards,\n` +
-                    `Rick\n\n` +
-                    `---\n` +
-                    `Beta Tester Email: ${email}\n` +
-                    `Signup Date: ${new Date().toLocaleDateString()}`
-                  );
-                  
-                  window.location.href = `mailto:RicksAppServices@gmail.com?subject=${subject}&body=${body}`;
-                  toast.success('Beta tester signup successful!');
-                }
-              }}
-            >
-              Become a Beta Tester
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                onClick={() => setBetaTesterDialogOpen(true)}
+              >
+                Become a Beta Tester
+              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button className="p-1 hover:bg-accent rounded-full transition-colors">
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>How to Become a Beta Tester</DialogTitle>
+                    <DialogDescription className="space-y-4 pt-3">
+                      <ol className="list-decimal ml-4 space-y-2">
+                        <li>Click the "Become a Beta Tester" button</li>
+                        <li>Enter your email address</li>
+                        <li>Write your app suggestions or feedback</li>
+                        <li>Click Submit - this will:</li>
+                        <ul className="list-disc ml-4 mt-1 space-y-1">
+                          <li>Copy your message to clipboard</li>
+                          <li>Attempt to open your email client</li>
+                          <li>If email client doesn't open, manually send your copied message to RicksAppServices@gmail.com</li>
+                        </ul>
+                      </ol>
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="secondary">Close</Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
         </div>
       </div>
+      <BetaTesterDialog
+        open={betaTesterDialogOpen}
+        onOpenChange={setBetaTesterDialogOpen}
+      />
     </div>
   );
 };
