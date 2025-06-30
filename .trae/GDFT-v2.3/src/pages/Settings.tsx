@@ -559,6 +559,34 @@ const Settings = () => {
           <p className="mt-4 text-gray-400">
             Track your workouts, monitor your progress, and achieve your fitness goals with GymDayFitTracker.
           </p>
+          <div className="mt-4 space-y-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                alert(
+                  'Version 2.3 Changes:\n' +
+                  '- Added calories burned calculation\n' +
+                  '- Improved workout tracking\n' +
+                  '\nVersion 2.2 Changes:\n' +
+                  '- Added custom workout plans\n' +
+                  '- Enhanced exercise database'
+                );
+              }}
+            >
+              Version History
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const email = prompt('Enter your email to become a beta tester:');
+                if (email) {
+                  window.location.href = `mailto:RicksAppServices@gmail.com?subject=Beta Tester Signup - GymDayFitTracker&body=New Beta Tester Signup%0D%0A%0D%0AEmail: ${email}%0D%0A%0D%0ADate: ${new Date().toLocaleDateString()}`;
+                }
+              }}
+            >
+              Become a Beta Tester
+            </Button>
+          </div>
         </div>
       </div>
     </div>
