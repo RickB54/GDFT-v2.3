@@ -30,21 +30,23 @@ export interface Set {
   isDurationOnly?: boolean;
 }
 
+export interface WorkoutExercise {
+  exerciseId: string;
+  sets: Set[];
+  notes?: string;
+}
+
 export interface Workout {
   id: string;
   name: string;
-  exercises: Array<{
-    exerciseId: string;
-    sets: Set[];
-    notes?: string;
-  }>;
+  exercises: WorkoutExercise[];
   date: string; // ISO string format
   duration?: number; // in minutes
   notes?: string;
   templateId?: string; // If created from a template
   completed: boolean;
-  // New field to track completion status of individual sets within the workout
-  completedSets?: CompletedSet[]; 
+  completedSets?: CompletedSet[];
+  caloriesBurned?: number; // Added for calorie tracking
 }
 
 export interface WorkoutTemplate {
@@ -110,6 +112,14 @@ export interface UserPreferences {
 export interface SettingsType {
   userPreferences: UserPreferences;
   // other settings
+}
+
+export interface BmiData {
+  date: string; // ISO string format
+  height: number; // in cm
+  weight: number; // in kg
+  bmi: number;
+  category: string;
 }
 
 // This is a more generic type for calendar events if you plan to have more than just workouts

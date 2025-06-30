@@ -1,10 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+// Update imports at the top of the file
+import React, { useState, useMemo } from 'react';
+import { useSettings } from '@/contexts/SettingsContext';
+import { convertWeightToKg } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useWorkout } from '@/contexts/WorkoutContext';
 import { useExercise } from '@/contexts/ExerciseContext';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { HelpCircle, Trash2, Edit, Save, X, Dumbbell, Clock, ListChecks, Repeat, BarChart2, ChevronDown, ChevronsRight, ChevronsLeft, ArchiveRestore, Play, User, Activity } from 'lucide-react'; // Added User and Activity icons
+import { HelpCircle, Trash2, Edit, Save, X, Dumbbell, Clock, ListChecks, Repeat, BarChart2, ChevronDown, ChevronsRight, ChevronsLeft, ArchiveRestore, Play, User, Activity } from 'lucide-react';
 import StatsHelpPopup from '@/components/ui/StatsHelpPopup';
 import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,50 +15,51 @@ import StatsCard from '@/components/ui/StatsCard';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
 import WorkoutStatsGraphPopup from '@/components/ui/WorkoutStatsGraphPopup';
-import type { Workout } from '@/lib/data';
+import type { Workout, Exercise } from '@/lib/data';
+import { formatCalories, calculateCalories } from '@/lib/formatters';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel, // Ensure this line is present
-  DropdownMenuSeparator // Ensure this line is present
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 type WorkoutWithNotes = Workout & { notes?: string };
 
+interface TotalWorkouts {
+    number: number;
+    totalCalories: number;
+    totalTime: number;
+    totalSets: number;
+    totalReps: number;
+}
+
 const Stats = () => {
-    const { workouts, getWorkoutStats, deleteWorkout, updateWorkout, startWorkout } = useWorkout();
+    const { unitSystem } = useSettings();
+    const { workouts, getWorkoutStats, deleteWorkout, updateWorkout, startWorkout, bodyMeasurements } = useWorkout();
     const { getExerciseById } = useExercise();
     const navigate = useNavigate();
     const [showHelp, setShowHelp] = useState(false);
-    const [showBodyMetricsHelp, setShowBodyMetricsHelp] = useState(false); // New state
-    const [showHealthMetricsHelp, setShowHealthMetricsHelp] = useState(false); // New state
+    const [showBodyMetricsHelp, setShowBodyMetricsHelp] = useState(false);
+    const [showHealthMetricsHelp, setShowHealthMetricsHelp] = useState(false);
     const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null);
     const [editedNotes, setEditedNotes] = useState('');
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
     const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null);
     const [filterType, setFilterType] = useState<'day' | 'week' | 'month' | 'all'>('all');
+    const [openWorkouts, setOpenWorkouts] = useState<Record<string, boolean>>({});
 
-    const [openWorkouts, setOpenWorkouts] = useState(() => {
-        const sorted = [...(workouts as WorkoutWithNotes[])].sort((a, b) => b.startTime - a.startTime);
-        if (sorted.length > 0) {
-            return { [sorted[0].id]: true };
+    const latestWeight = useMemo(() => {
+        const latestMeasurement = bodyMeasurements
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .find(m => m.weight);
+        return latestMeasurement?.weight || 70;
+    }, [bodyMeasurements]);
+
+    const displayWeight = useMemo(() => {
+        if (unitSystem === 'imperial') {
+            return Math.round(latestWeight * 2.20462); // Convert kg to lbs
         }
-        return {};
-    });
+        return latestWeight;
+    }, [latestWeight, unitSystem]);
 
     const stats = getWorkoutStats();
 
@@ -254,40 +258,55 @@ const Stats = () => {
         ].filter(Boolean).join(' ');
     };
 
+    // Add this calculation for filtered calories before the return statement
+    const filteredCalories = useMemo(() => {
+        return filteredAndSortedWorkouts.reduce((total, workout) => {
+            const durationMinutes = (workout.totalTime || 0) / 60;
+            const isCardio = workout.type === 'Cardio' || workout.type === 'Slide Board';
+            return total + calculateCalories(durationMinutes, latestWeight, isCardio);
+        }, 0);
+    }, [filteredAndSortedWorkouts, latestWeight]);
+
     return (
-        <div className="page-container page-transition">
+        <div className="container py-6 space-y-6">
             <div className="flex justify-between items-center mb-6 flex-wrap gap-2">
                 <h1 className="text-2xl font-bold">Workout Stats</h1>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate('/body-metrics')}> 
+                    <Button variant="outline" size="sm" onClick={() => navigate('/body-metrics')}>
                         <User className="mr-2 h-4 w-4" /> Body Metrics
                     </Button>
-                    {/* <Button variant="ghost" size="icon" onClick={() => setShowBodyMetricsHelp(true)}>
-                        <HelpCircle className="h-5 w-5" />
-                    </Button> */}
-                    
-                    {/* Health Metrics Button Block - REMOVED
-                    <Button variant="outline" size="sm" onClick={() => { toast.info('Health Metrics popup coming soon!'); }}>
-                        <Activity className="mr-2 h-4 w-4" /> Health Metrics
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setShowHealthMetricsHelp(true)}>
-                        <HelpCircle className="h-5 w-5" />
-                    </Button> 
-                    */}
-
                     <Button variant="ghost" size="icon" onClick={() => setShowHelp(true)} title="Help with Workout Stats">
                         <HelpCircle className="h-6 w-6" />
                     </Button>
                 </div>
             </div>
             <StatsHelpPopup isOpen={showHelp} onClose={() => setShowHelp(false)} title="Workout Stats Help" />
-            {/* Placeholder for Body Metrics Help Popup */}
-            {/* <StatsHelpPopup isOpen={showBodyMetricsHelp} onClose={() => setShowBodyMetricsHelp(false)} title="Body Metrics Help" /> */}
             
-            {/* Placeholder for Health Metrics Help Popup - REMOVED
-            <StatsHelpPopup isOpen={showHealthMetricsHelp} onClose={() => setShowHealthMetricsHelp(false)} title="Health Metrics Help" />
-            */}
-
+            {/* Calorie Banner */}
+            <div className="bg-primary/10 p-4 rounded-lg mb-6">
+                <div className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    <div>
+                        <span className="font-medium">
+                            {filterType === 'all' ? 'Total' : filterType === 'day' ? "Today's" : 
+                             filterType === 'week' ? 'This Week\'s' : 'This Month\'s'} Calories Burned: {formatCalories(filteredCalories)}
+                        </span>
+                        {latestWeight === 70 && (
+                            <div className="text-sm text-muted-foreground">
+                                (using default weight: {displayWeight}{unitSystem === 'imperial' ? ' lbs' : ' kg'}) - 
+                                <Button
+                                    variant="link"
+                                    className="p-0 h-auto text-sm text-muted-foreground hover:text-primary underline"
+                                    onClick={() => navigate('/body-metrics')}
+                                >
+                                    update BMI
+                                </Button>
+                                {' '}for more accurate results
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
             <WorkoutStatsGraphPopup
                 isOpen={!!selectedWorkout}
                 onClose={() => setSelectedWorkout(null)}
@@ -373,6 +392,8 @@ const Stats = () => {
                                                 <span className="font-medium text-gym-blue">{workoutType}</span>
                                                 </>
                                             )}
+                                            <span className="hidden sm:inline">|</span>
+                                            <span>{formatCalories(calculateCalories((workout.totalTime || 0) / 60, 70, workoutType === 'Cardio' || workoutType === 'Slide Board'))}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1 flex-shrink-0">
@@ -482,3 +503,4 @@ const Stats = () => {
 }
 
 export default Stats;
+ 

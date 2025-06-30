@@ -7,11 +7,12 @@ import {
   generateId,
   getSavedWorkoutTemplates,
   saveSavedWorkoutTemplates,
-  SavedWorkoutTemplate, // Import SavedWorkoutTemplate
-  WorkoutPlanOverride // Import WorkoutPlanOverride
+  SavedWorkoutTemplate,
+  WorkoutPlanOverride
 } from "@/lib/data";
-import { ExerciseCategory } from "@/lib/exerciseTypes"; // Corrected import path
+import { ExerciseCategory } from "@/lib/exerciseTypes";
 import { toast } from "sonner";
+import { calculateCalories, formatCalories } from "@/lib/formatters";
 
 interface WorkoutProviderProps {
   children: ReactNode;
@@ -98,7 +99,7 @@ interface WorkoutContextType {
   skipSet: (setId: string) => void;
   updateSet: (setId: string, updates: Partial<WorkoutSet>) => void;
   updateWorkout: (updatedWorkout: any) => void;
-  updateCurrentWorkoutNotes: (notes: string) => void; // Added this line
+  updateCurrentWorkoutNotes: (notes: string) => void;
   getWorkoutStats: () => {
     totalWorkouts: number;
     totalTime: number;
@@ -468,7 +469,15 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
   }, []);
 
   const getWorkoutStats = useCallback(() => {
-    return workouts.reduce(
+    // Get the most recent body measurement to find the user's weight
+    const latestMeasurement = bodyMeasurements
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .find(m => m.weight);
+
+    // Default to 70kg if no weight measurement is found
+    const weightKg = latestMeasurement?.weight || 70;
+
+    const stats = workouts.reduce(
       (stats, workout) => {
         stats.totalWorkouts += 1;
         stats.totalTime += workout.totalTime || 0;
@@ -476,11 +485,31 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
         stats.totalReps += workout.sets
           .filter((set) => set.completed && set.reps)
           .reduce((sum, set) => sum + (set.reps || 0), 0);
+        
+        // Calculate calories for this workout
+        if (workout.totalTime) {
+          const durationMinutes = workout.totalTime / 60;
+          const isCardio = workout.type === 'Cardio' || workout.type === 'Slide Board';
+          
+          // Find the weight measurement closest to the workout date
+          const workoutDate = new Date(workout.startTime);
+          const closestMeasurement = bodyMeasurements
+            .filter(m => m.weight && new Date(m.date) <= workoutDate)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+          
+          // Use the closest historical weight or default to current weight
+          const historicalWeight = closestMeasurement?.weight || weightKg;
+          
+          stats.totalCalories += calculateCalories(durationMinutes, historicalWeight, isCardio);
+        }
+        
         return stats;
       },
-      { totalWorkouts: 0, totalTime: 0, totalSets: 0, totalReps: 0 }
+      { totalWorkouts: 0, totalTime: 0, totalSets: 0, totalReps: 0, totalCalories: 0 }
     );
-  }, [workouts]);
+
+    return stats;
+  }, [workouts, bodyMeasurements]);
 
   const addBodyMeasurement = useCallback((measurement: Omit<BodyMeasurement, "id">) => {
     const newMeasurement: BodyMeasurement = {

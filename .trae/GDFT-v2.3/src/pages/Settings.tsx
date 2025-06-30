@@ -1,13 +1,16 @@
 import React, { useRef, useState } from "react";
 import { Download, Upload, Info, Trash2, HelpCircle } from "lucide-react";
 import { useExercise } from "@/contexts/ExerciseContext";
+import { slideboardExercises, cardioExercises, weightExercises, noEquipmentExercises } from "@/lib/data";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import SettingsHelpPopup from "@/components/ui/SettingsHelpPopup";
+import { useSettings } from '@/contexts/SettingsContext';
 
 const Settings = () => {
+  const { unitSystem, setUnitSystem } = useSettings();
   const { exercises, exportToCSV, importFromCSV, deleteAllExercises, reinstallAllExercises } = useExercise();
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
@@ -317,15 +320,55 @@ const Settings = () => {
   };
 
   const handleDeleteAllData = () => {
-    toast("Are you sure you want to delete all data? This action cannot be undone.", {
+    toast("Are you sure you want to delete all data?", {
+      description: "This action cannot be undone. All exercises, workouts, and settings will be permanently deleted.",
       action: {
         label: "Confirm",
-        onClick: () => {
+        onClick: async () => {
           try {
             setIsLoading(true);
+            
+            // Step 1: Clear all localStorage data
             localStorage.clear();
+            
+            // Step 2: Reinitialize essential data immediately (mobile-safe approach)
+            const defaultExercises = [
+              ...slideboardExercises, 
+              ...cardioExercises, 
+              ...weightExercises, 
+              ...noEquipmentExercises
+            ];
+            
+            // Restore minimal required data to prevent routing issues
+            localStorage.setItem('exercises', JSON.stringify(defaultExercises));
+            localStorage.setItem('savedWorkoutTemplates', '[]');
+            localStorage.setItem('workouts', '[]');
+            localStorage.setItem('customPlans', '[]');
+            
             toast.success("All data deleted successfully");
+            
+            // Step 3: Use mobile-safe navigation instead of window.location.reload()
+            // Mobile detection utility
+            const isMobileDevice = () => {
+            return window.Android || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            };
+            
+            // Safe navigation utility
+            const safeNavigateHome = () => {
+            if (isMobileDevice()) {
+            // Mobile: Direct navigation to avoid reload issues
+            window.location.href = '/';
+            } else {
+            // Desktop: Delayed reload for better UX
+            setTimeout(() => {
             window.location.reload();
+            }, 100);
+            }
+            };
+            
+            // Execute the navigation
+            safeNavigateHome();
+            
           } catch (error) {
             console.error("Delete all data failed:", error);
             toast.error("Failed to delete all data");
@@ -487,6 +530,23 @@ const Settings = () => {
           </div>
         </div>
         
+        <div className="card-glass p-6 rounded-lg">
+          <h2 className="text-xl font-semibold mb-4">Measurement Units</h2>
+          <div className="flex items-center gap-4">
+            <Button
+              variant={unitSystem === 'metric' ? 'default' : 'outline'}
+              onClick={() => setUnitSystem('metric')}
+            >
+              Metric (kg, cm)
+            </Button>
+            <Button
+              variant={unitSystem === 'imperial' ? 'default' : 'outline'}
+              onClick={() => setUnitSystem('imperial')}
+            >
+              Imperial (lbs, in)
+            </Button>
+          </div>
+        </div>
         <div className="card-glass p-6 rounded-lg">
           <h2 className="text-xl font-semibold mb-4">About</h2>
           <div className="flex items-center gap-4 text-gray-300">

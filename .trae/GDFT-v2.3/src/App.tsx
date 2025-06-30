@@ -25,12 +25,21 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Add this function at the top of your App component
+const isWebView = () => {
+  return window.Android || 
+         /Android.*wv|iPhone.*Mobile.*Safari|iPad.*Mobile.*Safari/.test(navigator.userAgent);
+};
+
+// In your App component, wrap BrowserRouter with basename if needed
 function App() {
+  const basename = isWebView() ? '' : undefined;
+  
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <SettingsProvider>
-          <BrowserRouter>
+    <BrowserRouter basename={basename}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <SettingsProvider>
             <ExerciseProvider>
               <WorkoutProvider>
                 <div className="bg-gym-darker min-h-screen text-white flex flex-col">
@@ -57,10 +66,10 @@ function App() {
                 <Sonner />
               </WorkoutProvider>
             </ExerciseProvider>
-          </BrowserRouter>
-        </SettingsProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+          </SettingsProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
   );
 }
 

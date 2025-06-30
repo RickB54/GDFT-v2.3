@@ -139,3 +139,33 @@ export const formatTimeString = (timeString: string): string => {
 
   return `${h}:${formattedMinutes} ${ampm}`;
 };
+
+/**
+ * Calculates calories burned during a workout using MET values
+ * @param durationMinutes - Duration of the workout in minutes
+ * @param weightKg - Weight of the person in kilograms
+ * @param isCardio - Whether the exercise is cardio (true) or weightlifting (false)
+ * @returns Calories burned during the workout
+ */
+export const calculateCalories = (durationMinutes: number, weightKg: number, isCardio: boolean): number => {
+  // Convert duration to hours
+  const durationHours = durationMinutes / 60;
+  
+  // MET values: weightlifting = 3.5, cardio = 6.0
+  const met = isCardio ? 6.0 : 3.5;
+  
+  // Formula: Calories = MET × weight(kg) × duration(hours)
+  return Math.round(met * weightKg * durationHours);
+};
+
+/**
+ * Formats calories value with the 🔥 emoji
+ * @param calories - The number of calories to format
+ * @returns Formatted calories string with emoji
+ */
+export const formatCalories = (calories: number | null): string => {
+  if (calories === null || isNaN(calories)) {
+    return "🔥 --";
+  }
+  return `🔥 ${Math.round(calories)} cal`;
+};
